@@ -1,6 +1,26 @@
 package main
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
+
+func main() {
+	const filepathRoot = "."
+	const port = "8080"
+
+	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(http.Dir(filepathRoot)))
+	corsMux := middlewareCors(mux)
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: corsMux,
+	}
+
+	log.Printf("Serving on port: %s\n", port)
+	log.Fatal(srv.ListenAndServe())
+}
 
 func middlewareCors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -13,14 +33,4 @@ func middlewareCors(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-func main() {
-	mux := http.NewServeMux()
-	corsMux := middlewareCors(mux)
-	server := http.Server{
-		Handler: corsMux,
-		Addr:    "localhost:8080",
-	}
-	server.ListenAndServe()
 }
