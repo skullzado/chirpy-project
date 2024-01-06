@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/skullzado/internal/auth"
-	"github.com/skullzado/internal/database"
+	"github.com/skullzado/chirpy-project/internal/auth"
+	"github.com/skullzado/chirpy-project/internal/database"
 )
 
 type User struct {
