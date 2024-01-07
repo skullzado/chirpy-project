@@ -3,20 +3,22 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/skullzado/chirpy-project/internal/auth"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
+
 	type response struct {
-		User
-		Token string `json:"token"`
+		ID            string `json:"id"`
+		Email         string `json:"email"`
+		Access_Token  string `json:"access_token"`
+		Refresh_Token string `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -39,24 +41,16 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defaultExpiration := 60 * 60 * 24
-	if params.ExpiresInSeconds == 0 {
-		params.ExpiresInSeconds = defaultExpiration
-	} else if params.ExpiresInSeconds > defaultExpiration {
-		params.ExpiresInSeconds = defaultExpiration
-	}
-
-	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, time.Duration(params.ExpiresInSeconds)*time.Second)
+	access_token, refresh_token, err := auth.MakeJWT(user.ID, cfg.jwtSecret)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create JWT")
 		return
 	}
 
 	respondWithJSON(w, http.StatusOK, response{
-		User: User{
-			ID:    user.ID,
-			Email: user.Email,
-		},
-		Token: token,
+		ID:            strconv.Itoa(user.ID),
+		Email:         user.Email,
+		Access_Token:  access_token,
+		Refresh_Token: refresh_token,
 	})
 }

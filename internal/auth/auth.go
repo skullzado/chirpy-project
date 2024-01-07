@@ -13,6 +13,8 @@ import (
 
 // ErrNoAuthHeaderIncluded -
 var ErrNoAuthHeaderIncluded = errors.New("not auth header included in request")
+var SixtyDaysDuration = time.Now().Day() * 60
+var OneHourDuration = time.Now().Hour() * 1
 
 // HashPassword -
 func HashPassword(password string) (string, error) {
@@ -29,16 +31,34 @@ func CheckPasswordHash(password, hash string) error {
 }
 
 // MakeJWT -
-func MakeJWT(userID int, tokenSecret string, expiresIn time.Duration) (string, error) {
+func MakeJWT(userID int, tokenSecret string) (string, string, error) {
 	signingKey := []byte(tokenSecret)
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:    "chirpy",
+	access_token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    "chirpy-access",
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Duration(OneHourDuration))),
 		Subject:   fmt.Sprintf("%d", userID),
 	})
-	return token.SignedString(signingKey)
+
+	refresh_token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    "chirpy-refresh",
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Duration(SixtyDaysDuration))),
+		Subject:   fmt.Sprintf("%d", userID),
+	})
+
+	access_token_generated, err := access_token.SignedString(signingKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	refresh_token_generated, err := refresh_token.SignedString(signingKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	return access_token_generated, refresh_token_generated, nil
 }
 
 // ValidateJWT -
